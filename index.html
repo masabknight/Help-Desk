@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>University Help Desk – Login</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><main><div class="card narrow">
+<h1>University Help Desk</h1><p class="muted">Sign in with your university account.</p>
+<form id="f"><label for="u">Registration no. / Staff ID</label><input id="u" required autofocus>
+<label for="p">Password</label><input id="p" type="password" required>
+<button style="width:100%">Log in</button></form><div id="m" class="msg"></div></div></main>
+<script src="/static/app.js"></script>
+<script>
+document.getElementById('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  try {
+    const d = await api('/api/login', 'POST', { login_id: u.value, password: p.value });
+    sessionStorage.setItem('token', d.token); sessionStorage.setItem('role', d.role); sessionStorage.setItem('name', d.name);
+    location.href = d.role === 'student' ? '/student' : '/admin';
+  } catch (err) { msg('m', err.message, false); }
+});
+</script></body></html>

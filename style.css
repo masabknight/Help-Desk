@@ -1,0 +1,17 @@
+:root{--bg:#f4f6fa;--card:#fff;--text:#1d2433;--muted:#667085;--line:#e2e6ee;--pri:#2457c5;--ok:#157f4b;--bad:#b42318;--warn:#b54708}
+@media(prefers-color-scheme:dark){:root{--bg:#12161f;--card:#1b2130;--text:#e8ecf4;--muted:#9aa4b8;--line:#2d3548;--pri:#6c9bff;--ok:#4ac58a;--bad:#ff7b6e;--warn:#f5a54a}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--text)}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:var(--card);border-bottom:1px solid var(--line)}
+header h1{font-size:18px;margin:0}main{max-width:1100px;margin:20px auto;padding:0 16px;display:grid;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}.narrow{max-width:380px;margin:12vh auto}
+h2{font-size:16px;margin:0 0 10px}label{display:block;margin:10px 0 4px;font-weight:600;font-size:13px}
+input,select,textarea,button{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text)}
+input,select,textarea{width:100%}textarea{min-height:90px}button{background:var(--pri);color:#fff;border:0;cursor:pointer;margin-top:10px}
+button.sec{background:transparent;color:var(--pri);border:1px solid var(--pri)}.row{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.row>*{width:auto;flex:1}.row button{flex:0}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:600}
+tr.click{cursor:pointer}tr.click:hover{background:var(--bg)}.scroll{overflow-x:auto}
+.msg{margin-top:10px;padding:8px 10px;border-radius:6px;font-size:14px}.msg:empty{display:none}.msg.ok{background:#e6f6ee;color:var(--ok)}.msg.err{background:#fdecea;color:var(--bad)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.stat{text-align:center;padding:12px}.stat b{display:block;font-size:26px}
+.badge{padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid currentColor}
+.Pending{color:var(--warn)}.Processing{color:var(--pri)}.Resolved{color:var(--ok)}.Rejected{color:var(--bad)}
+.muted{color:var(--muted);font-size:13px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:760px){.grid2{grid-template-columns:1fr}}

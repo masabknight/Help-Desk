@@ -1,0 +1,88 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Help Desk Operator Console</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><header><h1>Help Desk Console</h1><div><span id="who" class="muted"></span> <button class="sec" onclick="logout()">Log out</button></div></header>
+<main>
+<div id="msg" class="msg"></div>
+<div class="stats" id="stats"></div>
+
+<div class="card"><h2>Pending queue (FIFO)</h2>
+<p class="muted" id="qinfo"></p>
+<div class="scroll"><table id="q"></table></div>
+<div class="row"><div class="admin-only"><label for="assign">Assign to (optional)</label><select id="assign"><option value="">Myself</option></select></div>
+<button onclick="processNext()">Process next request</button></div></div>
+
+<div class="grid2">
+<div class="card"><h2>Search</h2>
+<div class="row"><input id="sq" placeholder="Request ID or registration no."><button onclick="search()">Search</button></div>
+<div class="scroll"><table id="sr"></table></div></div>
+<div class="card" id="detail"><h2>Request details</h2><p class="muted">Select a request to view and update it.</p></div>
+</div>
+
+<div class="card admin-only"><h2>Report</h2><div class="grid2"><div id="cats"></div><div class="scroll" style="max-height:320px;overflow-y:auto" id="hist"></div></div></div>
+</main>
+<script src="/static/app.js"></script>
+<script>
+guard(['operator', 'administrator']);
+const isAdmin = sessionStorage.getItem('role') === 'administrator';
+who.textContent = sessionStorage.getItem('name') + ' (' + sessionStorage.getItem('role') + ')';
+if (!isAdmin) document.querySelectorAll('.admin-only').forEach(e => e.hidden = true);
+let current = null;
+
+const rows = list => '<tr><th>ID</th><th>Reg. no.</th><th>Category</th><th>Status</th><th>Assigned</th></tr>' +
+  list.map(r => `<tr class="click" onclick="view(${r.request_id})"><td>#${r.request_id}</td><td>${esc(r.registration_no)}</td><td>${esc(r.category)}</td><td>${badge(r.status)}</td><td>${esc(r.assigned_to)}</td></tr>`).join('');
+
+async function refresh() {
+  try {
+    const st = await api('/api/stats');
+    stats.innerHTML = ['Pending', 'Processing', 'Resolved', 'Rejected'].map(k => `<div class="card stat ${k}"><b>${st[k]}</b>${k}</div>`).join('');
+    const d = await api('/api/queue');
+    qinfo.textContent = `front = ${d.front}, rear = ${d.rear}, count = ${d.count} / capacity ${d.capacity}`;
+    q.innerHTML = '<tr><th>Position</th><th>Array index</th><th>ID</th><th>Reg. no.</th><th>Category</th><th>Description</th><th>Submitted</th></tr>' +
+      (d.items.length ? d.items.map((r, i) => `<tr class="click" onclick="view(${r.request_id})"><td>${i + 1}${i ? '' : ' (next)'}</td><td>${r.array_index}</td><td>#${r.request_id}</td><td>${esc(r.registration_no)}</td><td>${esc(r.category)}</td><td>${esc(r.description)}</td><td>${esc(r.created_at)}</td></tr>`).join('')
+        : '<tr><td colspan="7" class="muted">The queue is empty.</td></tr>');
+    if (isAdmin) {
+      const r = await api('/api/report');
+      cats.innerHTML = '<table><tr><th>Category</th><th>Requests</th></tr>' + r.by_category.map(c => `<tr><td>${esc(c.category)}</td><td>${c.count}</td></tr>`).join('') + '</table>';
+      hist.innerHTML = '<table><tr><th>When</th><th>Req</th><th>By</th><th>Change</th><th>Remarks</th></tr>' + r.history.map(h =>
+        `<tr><td>${esc(h.changed_at)}</td><td>#${h.request_id}</td><td>${esc(h.changed_by)}</td><td>${esc(h.old_status || '—')} → ${esc(h.new_status)}</td><td>${esc(h.remarks)}</td></tr>`).join('') + '</table>';
+    }
+  } catch (e) { msg('msg', e.message, false); }
+}
+async function loadOperators() {
+  if (!isAdmin) return;
+  const d = await api('/api/operators');
+  assign.innerHTML = '<option value="">Myself</option>' + d.items.map(o => `<option value="${o.user_id}">${esc(o.name)}</option>`).join('');
+}
+async function processNext() {
+  try {
+    const d = await api('/api/queue/process', 'POST', assign.value ? { assign_to: Number(assign.value) } : {});
+    msg('msg', d.message, true); refresh(); view(d.request_id);
+  } catch (e) { msg('msg', e.message, false); refresh(); }
+}
+async function search() {
+  try {
+    const d = await api('/api/search?q=' + encodeURIComponent(sq.value));
+    sr.innerHTML = rows(d.items); msg('msg', d.items.length + ' result(s) found', true);
+  } catch (e) { sr.innerHTML = ''; msg('msg', e.message, false); }
+}
+async function view(id) {
+  try {
+    const r = await api('/api/requests/' + id); current = id;
+    detail.innerHTML = `<h2>Request #${r.request_id} ${badge(r.status)}</h2>
+      <p><b>${esc(r.student_name)}</b> (${esc(r.registration_no)}) – ${esc(r.category)}<br>${esc(r.description)}</p>
+      <p class="muted">Assigned to: ${esc(r.assigned_to || '—')} · Created ${esc(r.created_at)} · Updated ${esc(r.updated_at)}</p>
+      <label for="ns">Update status</label><select id="ns"><option>Processing</option><option>Resolved</option><option>Rejected</option></select>
+      <label for="rem">Remarks (required for Rejected)</label><input id="rem" maxlength="500">
+      <button onclick="updateStatus()">Save</button><div id="dm" class="msg"></div>
+      <h2 style="margin-top:14px">History</h2>` + historyTable(r.history);
+  } catch (e) { msg('msg', e.message, false); }
+}
+async function updateStatus() {
+  try {
+    const d = await api('/api/requests/' + current + '/status', 'PUT', { status: ns.value, remarks: rem.value });
+    msg('msg', d.message, true); refresh(); view(current);
+  } catch (e) { msg('dm', e.message, false); }
+}
+sq.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+loadOperators(); refresh(); setInterval(refresh, 8000);
+</script></body></html>

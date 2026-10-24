@@ -1,0 +1,44 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Student Help Desk</title><link rel="stylesheet" href="/static/style.css"></head>
+<body><header><h1>Student Help Desk</h1><div><span id="who" class="muted"></span> <button class="sec" onclick="logout()">Log out</button></div></header>
+<main>
+<div class="card"><h2>Submit a new request</h2>
+<form id="f"><label for="cat">Category</label>
+<select id="cat"><option value="">— select —</option><option>Registration</option><option>Fee Issue</option><option>Examination</option><option>Other</option></select>
+<label for="desc">Description</label><textarea id="desc" maxlength="1000"></textarea>
+<button>Submit request</button></form><div id="m" class="msg"></div></div>
+<div class="card"><h2>My requests <button class="sec" style="margin:0 0 0 8px;padding:3px 10px" onclick="load()">Refresh</button></h2>
+<div class="scroll"><table id="t"></table></div></div>
+<div class="card" id="detail" hidden></div>
+</main>
+<script src="/static/app.js"></script>
+<script>
+guard(['student']);
+who.textContent = sessionStorage.getItem('name');
+async function load() {
+  try {
+    const d = await api('/api/my-requests');
+    t.innerHTML = '<tr><th>ID</th><th>Category</th><th>Status</th><th>Submitted</th><th>Updated</th></tr>' +
+      (d.items.length ? d.items.map(r => `<tr class="click" onclick="view(${r.request_id})"><td>#${r.request_id}</td><td>${esc(r.category)}</td><td>${badge(r.status)}</td><td>${esc(r.created_at)}</td><td>${esc(r.updated_at)}</td></tr>`).join('')
+        : '<tr><td colspan="5" class="muted">You have not submitted any requests yet.</td></tr>');
+  } catch (e) { msg('m', e.message, false); }
+}
+async function view(id) {
+  try {
+    const r = await api('/api/requests/' + id);
+    detail.hidden = false;
+    detail.innerHTML = `<h2>Request #${r.request_id} ${badge(r.status)}</h2><p><b>${esc(r.category)}</b><br>${esc(r.description)}</p>
+      <p class="muted">Assigned to: ${esc(r.assigned_to || 'not yet assigned')}</p><h2>History</h2>` + historyTable(r.history);
+  } catch (e) { msg('m', e.message, false); }
+}
+f.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!cat.value) return msg('m', 'Please select a category', false);
+  if (!desc.value.trim()) return msg('m', 'Please enter a description', false);
+  try {
+    const d = await api('/api/requests', 'POST', { category: cat.value, description: desc.value });
+    msg('m', d.message, true); f.reset(); load();
+  } catch (err) { msg('m', err.message, false); }   // includes "queue is full"
+});
+load(); setInterval(load, 10000);
+</script></body></html>

@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 3.15)
+project(UniversityHelpDesk CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+include(FetchContent)
+set(CROW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(CROW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(CROW_INSTALL OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(Crow GIT_REPOSITORY https://github.com/CrowCpp/Crow.git GIT_TAG v1.2.0)
+FetchContent_MakeAvailable(Crow)
+find_package(SQLite3 REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
+
+add_executable(helpdesk src/main.cpp)
+target_include_directories(helpdesk PRIVATE src)
+target_link_libraries(helpdesk PRIVATE Crow::Crow SQLite::SQLite3 OpenSSL::Crypto Threads::Threads)
+
+# Phase 1: queue tested on its own
+add_executable(queue_test tests/queue_test.cpp)
+target_include_directories(queue_test PRIVATE src)
